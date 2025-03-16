@@ -38,9 +38,9 @@ if [ "$( opkg list-installed 2>/dev/null| grep -c "^dnsmasq")" -ne '0' ];then
   uci commit dhcp
   /etc/init.d/dnsmasq restart
 fi
-if [ "$(grep -c "/usr/share/cmzj/openwrt-k_tool.sh update rules" /etc/crontabs/root)" -eq '0' ];then
-  echo "0 2 * * * /usr/share/cmzj/openwrt-k_tool.sh update rules" >>/etc/crontabs/root
-fi
+# if [ "$(grep -c "/usr/share/cmzj/openwrt-k_tool.sh update rules" /etc/crontabs/root)" -eq '0' ];then
+#   echo "0 2 * * * /usr/share/cmzj/openwrt-k_tool.sh update rules" >>/etc/crontabs/root
+# fi
 ln -s /usr/share/cmzj/openwrt-k_tool.sh /bin/openwrt-k
 chmod +x /usr/share/cmzj/openwrt-k_tool.sh
 uci commit
