@@ -1,0 +1,49 @@
+# SPDX-License-Identifier: MIT
+
+name: Check OpenWrt Updates
+on:
+  schedule:
+    - cron: '0 4 * * *'  # 每天凌晨4点检查
+  workflow_dispatch:
+
+jobs:
+  check-updates:
+    runs-on: ubuntu-22.04
+    name: 检查 OpenWrt 官方仓库更新
+    steps:
+      - name: 检查 OpenWrt 仓库最新提交
+        id: check
+        run: |
+          # 获取 OpenWrt 官方仓库最新提交的 SHA
+          LATEST_SHA=$(curl -s "https://api.github.com/repos/openwrt/openwrt/commits/main" | jq -r '.sha')
+          echo "latest_sha=$LATEST_SHA" >> $GITHUB_OUTPUT
+          
+          # 检查是否有缓存的上次检查的 SHA
+          CACHE_KEY="openwrt-last-sha"
+          
+          # 尝试从 GitHub API 获取上次的 SHA（使用 repository variables 或 secrets）
+          # 这里我们使用一个简单的方法：检查是否在过去24小时内有新提交
+          YESTERDAY=$(date -d "yesterday" --iso-8601)
+          RECENT_COMMITS=$(curl -s "https://api.github.com/repos/openwrt/openwrt/commits?since=$YESTERDAY" | jq length)
+          
+          echo "recent_commits=$RECENT_COMMITS" >> $GITHUB_OUTPUT
+          echo "检查到 OpenWrt 仓库在过去24小时内有 $RECENT_COMMITS 个新提交"
+          
+          if [ "$RECENT_COMMITS" -gt 0 ]; then
+            echo "has_updates=true" >> $GITHUB_OUTPUT
+            echo "发现 OpenWrt 仓库有更新！"
+          else
+            echo "has_updates=false" >> $GITHUB_OUTPUT
+            echo "OpenWrt 仓库无更新"
+          fi
+
+      - name: 触发构建工作流
+        if: steps.check.outputs.has_updates == 'true'
+        run: |
+          curl -X POST \
+            -H "Accept: application/vnd.github.v3+json" \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            "https://api.github.com/repos/${{ github.repository }}/dispatches" \
+            -d '{"event_type":"openwrt-updated","client_payload":{"reason":"OpenWrt repository updated"}}'
+          echo "已触发构建工作流"
