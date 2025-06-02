@@ -358,9 +358,12 @@ def prepare_cfg(config: dict[str, Any],
     if os.path.isfile(os.path.join(tmpdir.name, "AdGuardHome.tar.gz")):
         with tarfile.open(os.path.join(tmpdir.name, "AdGuardHome.tar.gz"), "r:gz") as tar:
             if file := tar.extractfile("./AdGuardHome/AdGuardHome"):
-                with open(os.path.join(files_path, "usr", "bin", "AdGuardHome", "AdGuardHome"), "wb") as f:
+                # 创建 AdGuardHome 目录
+                adguard_dir = os.path.join(files_path, "usr", "bin", "AdGuardHome")
+                os.makedirs(adguard_dir, exist_ok=True)
+                with open(os.path.join(adguard_dir, "AdGuardHome"), "wb") as f:
                     f.write(file.read())
-                os.chmod(os.path.join(files_path, "usr", "bin", "AdGuardHome", "AdGuardHome"), 0o755)  # noqa: S103
+                os.chmod(os.path.join(adguard_dir, "AdGuardHome"), 0o755)  # noqa: S103
 
     clash_core_path = os.path.join(files_path, "etc", "openclash", "core")
     if not os.path.isdir(clash_core_path):
