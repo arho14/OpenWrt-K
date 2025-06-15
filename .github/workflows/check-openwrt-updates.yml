@@ -14,13 +14,6 @@ jobs:
       - name: 检查 OpenWrt 仓库最新提交
         id: check
         run: |
-          # 获取 OpenWrt 官方仓库最新提交的 SHA
-          LATEST_SHA=$(curl -s "https://api.github.com/repos/openwrt/openwrt/commits/main" | jq -r '.sha')
-          echo "latest_sha=$LATEST_SHA" >> $GITHUB_OUTPUT
-          
-          # 检查是否有缓存的上次检查的 SHA
-          CACHE_KEY="openwrt-last-sha"
-          
           # 尝试从 GitHub API 获取上次的 SHA（使用 repository variables 或 secrets）
           # 这里我们使用一个简单的方法：检查是否在过去24小时内有新提交
           YESTERDAY=$(date -d "yesterday" --iso-8601)
