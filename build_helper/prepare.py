@@ -202,7 +202,7 @@ def prepare_cfg(config: dict[str, Any],
         path = os.path.join(openwrt.path, "package", "cmzj_packages", pkg_name)
         pkg_path = os.path.join(cloned_repos[(pkg["REPOSITORIE"], pkg["BRANCH"])], pkg["PATH"])
         if not os.path.exists(pkg_path):
-            msg = f"找不到{cfg_name}配置中的拓展软件包: {pkg_name} ,这可能是由于仓库 {pkg["REPOSITORIE"]} 目录结构变更导致的,请检查您的拓展软件包配置"
+            msg = f"找不到{cfg_name}配置中的拓展软件包: {pkg_name} ,这可能是由于仓库 {pkg['REPOSITORIE']} 目录结构变更导致的,请检查您的拓展软件包配置"
             raise FileNotFoundError(msg)
         logger.debug("复制拓展软件包 %s 到 %s", pkg_name, path)
         shutil.copytree(os.path.join(cloned_repos[(pkg["REPOSITORIE"], pkg["BRANCH"])], pkg["PATH"]), path, symlinks=True)
@@ -231,7 +231,7 @@ def prepare_cfg(config: dict[str, Any],
     enable_fullcone = openwrt.get_package_config("kmod-nft-fullcone") in ("y", "m")
     if enable_fullcone or enable_sfe:
         logger.info("%s添加952补丁", cfg_name)
-        patch925 = f"952{"-add" if kernel_version != "5.10" else ""}-net-conntrack-events-support-multiple-registrant.patch"
+        patch925 = f"952{'-add' if kernel_version != '5.10' else ''}-net-conntrack-events-support-multiple-registrant.patch"
         shutil.copy2(os.path.join(turboacc_dir, f"hack-{kernel_version}", patch925),
                      os.path.join(openwrt.path, "target", "linux", "generic", f"hack-{kernel_version}", patch925))
         logger.info("%s附加内核配置CONFIG_NF_CONNTRACK_CHAIN_EVENTS", cfg_name)
@@ -335,7 +335,6 @@ def prepare_cfg(config: dict[str, Any],
         # 获取mihomo最新版本
         mihomo_latest = request_get("https://github.com/MetaCubeX/mihomo/releases/latest")
         if mihomo_latest:
-            import re
             # 从URL中提取版本号，格式类似：https://github.com/MetaCubeX/mihomo/releases/tag/v1.19.10
             version_match = re.search(r'releases/tag/v([\d.]+)', mihomo_latest)
             mihomo_version = version_match.group(1) if version_match else ''
@@ -422,7 +421,7 @@ def prepare_cfg(config: dict[str, Any],
             if line.startswith("  uci set aria2.main.bt_tracker="):
                 f.write(f"  uci set aria2.main.bt_tracker='{bt_tracker}'\n")
             elif line.startswith("uci set network.lan.ipaddr="):
-                f.write(f"uci set network.lan.ipaddr='{config["openwrtext"]["ipaddr"]}'\n")
+                f.write(f"uci set network.lan.ipaddr='{config['openwrtext']['ipaddr']}'\n")
             elif "Compiled by 沉默の金" in line:
                 f.write(line.replace("Compiled by 沉默の金", f"Compiled by {compiler}") + "\n")
             else:
@@ -438,7 +437,7 @@ def prepare_cfg(config: dict[str, Any],
             elif "set system.@system[-1].timezone='UTC'" in line:
                 f.write(line.replace("set system.@system[-1].timezone='UTC'",
                                      f"set system.@system[-1].timezone='{config['openwrtext']['timezone']}'") +
-                                     f"\n		set system.@system[-1].zonename='{config["openwrtext"]["zonename"]}'\n")
+                                     f"\n		set system.@system[-1].zonename='{config['openwrtext']['zonename']}'\n")
             else:
                 f.write(line + "\n")
 
@@ -446,7 +445,7 @@ def prepare_cfg(config: dict[str, Any],
 
     with open(os.path.join(openwrt.files, "etc", "openwrt-k_info"), "w", encoding="utf-8") as f:
         content = ""
-        content += f'COMPILE_START_TIME="{datetime.now(timezone(timedelta(hours=8))).strftime('%y.%m.%d-%H')}"\n'
+        content += f'COMPILE_START_TIME="{datetime.now(timezone(timedelta(hours=8))).strftime("%y.%m.%d-%H")}"\n'
         content += f'COMPILER="{compiler}"\n'
         content += f'REPOSITORY_URL="https://github.com/{user_repo}"\n'
         content += f'TAG_SUFFIX="{get_release_suffix(config)[1]}"\n'
