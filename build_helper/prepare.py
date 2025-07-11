@@ -348,7 +348,7 @@ def prepare_cfg(config: dict[str, Any],
                                 os.path.join(tmpdir.name, "clash_meta.tar.gz")))
         else:
             # 备用下载地址
-        dl_tasks.append(dl2(f"https://raw.githubusercontent.com/vernesong/OpenClash/refs/heads/core/dev/meta/clash-{clash_arch}.tar.gz",
+            dl_tasks.append(dl2(f"https://raw.githubusercontent.com/vernesong/OpenClash/refs/heads/core/dev/meta/clash-{clash_arch}.tar.gz",
                                 os.path.join(tmpdir.name, "clash_meta.tar.gz")))
         #dl_tasks.append(dl2(f"https://raw.githubusercontent.com/vernesong/OpenClash/refs/heads/core/dev/smart/clash-{clash_arch}.tar.gz",
         #                        os.path.join(tmpdir.name, "clash.smart.tar.gz")))
