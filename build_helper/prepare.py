@@ -327,82 +327,28 @@ def prepare_cfg(config: dict[str, Any],
 
     if clash_arch and openwrt.get_package_config("luci-app-openclash") == "y":
         logger.info("%s下载架构为%s的OpenClash核心", cfg_name, clash_arch)
-        # 获取mihomo最新版本
-        mihomo_latest = request_get("https://github.com/MetaCubeX/mihomo/releases/latest")
-        if mihomo_latest:
-            # 从URL中提取版本号，格式类似：https://github.com/MetaCubeX/mihomo/releases/tag/v1.19.10
-            version_match = re.search(r'releases/tag/v([\d.]+)', mihomo_latest)
-            mihomo_version = version_match.group(1) if version_match else ''
-            if mihomo_version:
-                #https://github.com/MetaCubeX/mihomo/releases/download/v1.19.10/mihomo-linux-amd64-v1.19.10.gz
-                dl_tasks.append(dl2(f"https://github.com/MetaCubeX/mihomo/releases/download/v{mihomo_version}/mihomo-{clash_arch}-v{mihomo_version}.gz",
-                                    os.path.join(tmpdir.name, "mihomo.gz")))
-            else:
-                # 备用下载地址
-                dl_tasks.append(dl2(f"https://raw.githubusercontent.com/vernesong/OpenClash/refs/heads/core/dev/meta/clash-{clash_arch}.tar.gz",
+        dl_tasks.append(dl2(f"https://raw.githubusercontent.com/vernesong/OpenClash/refs/heads/core/dev/meta/clash-{clash_arch}.tar.gz",
                                 os.path.join(tmpdir.name, "clash_meta.tar.gz")))
-        else:
-            # 备用下载地址
-            dl_tasks.append(dl2(f"https://raw.githubusercontent.com/vernesong/OpenClash/refs/heads/core/dev/meta/clash-{clash_arch}.tar.gz",
-                                os.path.join(tmpdir.name, "clash_meta.tar.gz")))
-        #dl_tasks.append(dl2(f"https://raw.githubusercontent.com/vernesong/OpenClash/refs/heads/core/dev/smart/clash-{clash_arch}.tar.gz",
-        #                        os.path.join(tmpdir.name, "clash.smart.tar.gz")))
 
     wait_dl_tasks(dl_tasks)
     # 解压
     if os.path.isfile(os.path.join(tmpdir.name, "AdGuardHome.tar.gz")):
         with tarfile.open(os.path.join(tmpdir.name, "AdGuardHome.tar.gz"), "r:gz") as tar:
             if file := tar.extractfile("./AdGuardHome/AdGuardHome"):
-                # 创建 AdGuardHome 目录
-                adguard_dir = os.path.join(files_path, "usr", "bin", "AdGuardHome")
-                os.makedirs(adguard_dir, exist_ok=True)
-                with open(os.path.join(adguard_dir, "AdGuardHome"), "wb") as f:
+                with open(os.path.join(files_path, "usr", "bin", "AdGuardHome", "AdGuardHome"), "wb") as f:
                     f.write(file.read())
-                os.chmod(os.path.join(adguard_dir, "AdGuardHome"), 0o755)  # noqa: S103
+                os.chmod(os.path.join(files_path, "usr", "bin", "AdGuardHome", "AdGuardHome"), 0o755)  # noqa: S103
 
     clash_core_path = os.path.join(files_path, "etc", "openclash", "core")
     if not os.path.isdir(clash_core_path):
         os.makedirs(clash_core_path)
-    if os.path.isfile(os.path.join(tmpdir.name, "clash_tun.gz")):
-        with gzip.open(os.path.join(tmpdir.name, "clash_tun.gz"), 'rb') as f_in, open(os.path.join(clash_core_path, "clash_tun"), 'wb') as f_out:
-            shutil.copyfileobj(f_in, f_out)
-        os.chmod(os.path.join(clash_core_path, "clash_tun"), 0o755)  # noqa: S103
 
-    # 处理mihomo核心文件（.gz格式）
-    if os.path.isfile(os.path.join(tmpdir.name, "mihomo.gz")):
-        try:
-            logger.info("%s解压mihomo核心文件", cfg_name)
-            os.makedirs(clash_core_path, exist_ok=True)
-            mihomo_path = os.path.join(clash_core_path, "clash_meta")
-            
-            with gzip.open(os.path.join(tmpdir.name, "mihomo.gz"), 'rb') as f_in, open(mihomo_path, 'wb') as f_out:
-                shutil.copyfileobj(f_in, f_out)
-            
-            # 检查文件大小，确保解压成功
-            if os.path.getsize(mihomo_path) == 0:
-                logger.error("%s mihomo核心文件解压失败：文件大小为0", cfg_name)
-                os.remove(mihomo_path)
-            else:
-                os.chmod(mihomo_path, 0o755)  # noqa: S103
-                logger.info("%s mihomo核心文件解压成功", cfg_name)
-        except Exception as e:
-            logger.error("%s mihomo核心文件解压失败：%s", cfg_name, str(e))
-            if os.path.exists(mihomo_path):
-                os.remove(mihomo_path)
-    # 备用：处理原始tar.gz格式
-    elif os.path.isfile(os.path.join(tmpdir.name, "clash_meta.tar.gz")):
+    if os.path.isfile(os.path.join(tmpdir.name, "clash_meta.tar.gz")):
         with tarfile.open(os.path.join(tmpdir.name, "clash_meta.tar.gz"), "r:gz") as tar:
             if file := tar.extractfile("clash"):
                 with open(os.path.join(clash_core_path, "clash_meta"), "wb") as f:
                     f.write(file.read())
                 os.chmod(os.path.join(clash_core_path, "clash_meta"), 0o755)  # noqa: S103
-
-    #if os.path.isfile(os.path.join(tmpdir.name, "clash.smart.tar.gz")):
-    #    with tarfile.open(os.path.join(tmpdir.name, "clash.smart.tar.gz"), "r:gz") as tar:
-    #        if file := tar.extractfile("clash"):
-    #            with open(os.path.join(clash_core_path, "clash"), "wb") as f:
-    #                f.write(file.read())
-    #            os.chmod(os.path.join(clash_core_path, "clash"), 0o755)  # noqa: S103
 
     tmpdir.cleanup()
 
