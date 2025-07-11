@@ -327,11 +327,6 @@ def prepare_cfg(config: dict[str, Any],
 
     if clash_arch and openwrt.get_package_config("luci-app-openclash") == "y":
         logger.info("%s下载架构为%s的OpenClash核心", cfg_name, clash_arch)
-        latest_versions = request_get("https://raw.githubusercontent.com/vernesong/OpenClash/core/master/core_version")
-        tun_v = latest_versions.splitlines()[1] if latest_versions else None
-        if tun_v:
-            dl_tasks.append(dl2(f"https://raw.githubusercontent.com/vernesong/OpenClash/core/master/premium/clash-{clash_arch}-{tun_v}.gz",
-                                os.path.join(tmpdir.name, "clash_tun.gz")))
         # 获取mihomo最新版本
         mihomo_latest = request_get("https://github.com/MetaCubeX/mihomo/releases/latest")
         if mihomo_latest:
