@@ -11,24 +11,84 @@ jobs:
     runs-on: ubuntu-22.04
     name: 检查 OpenWrt 官方仓库更新
     steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: 检查 OpenWrt 仓库最新提交
         id: check
         run: |
-          # 尝试从 GitHub API 获取上次的 SHA（使用 repository variables 或 secrets）
-          # 这里我们使用一个简单的方法：检查是否在过去24小时内有新提交
-          YESTERDAY=$(date -d "yesterday" --iso-8601)
-          RECENT_COMMITS=$(curl -s "https://api.github.com/repos/openwrt/openwrt/commits?since=$YESTERDAY" | jq length)
+          set -e
           
-          echo "recent_commits=$RECENT_COMMITS" >> $GITHUB_OUTPUT
-          echo "检查到 OpenWrt 仓库在过去24小时内有 $RECENT_COMMITS 个新提交"
+          # 获取 OpenWrt 官方仓库的最新 commit SHA
+          echo "正在获取 OpenWrt 官方仓库最新提交..."
+          LATEST_SHA=$(curl -s -f "https://api.github.com/repos/openwrt/openwrt/commits/master" | jq -r '.sha')
           
-          if [ "$RECENT_COMMITS" -gt 0 ]; then
-            echo "has_updates=true" >> $GITHUB_OUTPUT
-            echo "发现 OpenWrt 仓库有更新！"
-          else
-            echo "has_updates=false" >> $GITHUB_OUTPUT
-            echo "OpenWrt 仓库无更新"
+          if [ -z "$LATEST_SHA" ] || [ "$LATEST_SHA" = "null" ]; then
+            echo "❌ 无法获取 OpenWrt 最新提交 SHA"
+            exit 1
           fi
+          
+          echo "OpenWrt 最新提交 SHA: $LATEST_SHA"
+          echo "latest_sha=$LATEST_SHA" >> $GITHUB_OUTPUT
+          
+          # 检查是否存在上次记录的 SHA
+          LAST_SHA_FILE=".github/last-openwrt-sha"
+          
+          if [ -f "$LAST_SHA_FILE" ]; then
+            LAST_SHA=$(cat "$LAST_SHA_FILE")
+            echo "上次记录的 SHA: $LAST_SHA"
+            echo "last_sha=$LAST_SHA" >> $GITHUB_OUTPUT
+            
+            if [ "$LATEST_SHA" != "$LAST_SHA" ]; then
+              echo "✅ 发现 OpenWrt 仓库有新的更新！"
+              echo "   从 $LAST_SHA"
+              echo "   到 $LATEST_SHA"
+              echo "has_updates=true" >> $GITHUB_OUTPUT
+            else
+              echo "ℹ️  OpenWrt 仓库无新更新（SHA 相同）"
+              echo "has_updates=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "⚠️  首次运行，将记录当前 SHA 作为基准"
+            echo "has_updates=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 更新记录的 SHA
+        if: always()
+        run: |
+          mkdir -p .github
+          echo "${{ steps.check.outputs.latest_sha }}" > .github/last-openwrt-sha
+          echo "已更新记录的 SHA 到: ${{ steps.check.outputs.latest_sha }}"
+
+      - name: 提交 SHA 记录更新
+        if: always()
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          
+          if [ -n "$(git status --porcelain)" ]; then
+            git add .github/last-openwrt-sha
+            git commit -m "chore: 更新 OpenWrt 最新提交 SHA 到 ${{ steps.check.outputs.latest_sha }}"
+            git push
+            echo "已提交 SHA 记录更新"
+          else
+            echo "SHA 记录无变化，跳过提交"
+          fi
+
+      - name: 获取更新详情
+        if: steps.check.outputs.has_updates == 'true'
+        id: update-details
+        run: |
+          LAST_SHA="${{ steps.check.outputs.last_sha }}"
+          LATEST_SHA="${{ steps.check.outputs.latest_sha }}"
+          
+          # 获取两个 SHA 之间的提交数量
+          COMMITS_COUNT=$(curl -s "https://api.github.com/repos/openwrt/openwrt/compare/${LAST_SHA}...${LATEST_SHA}" | jq '.total_commits // 0')
+          
+          echo "commits_count=$COMMITS_COUNT" >> $GITHUB_OUTPUT
+          echo "在两次检查之间有 $COMMITS_COUNT 个新提交"
 
       - name: 触发构建工作流
         if: steps.check.outputs.has_updates == 'true'
@@ -38,5 +98,16 @@ jobs:
             -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             -H "Content-Type: application/json" \
             "https://api.github.com/repos/${{ github.repository }}/dispatches" \
-            -d '{"event_type":"openwrt-updated","client_payload":{"reason":"OpenWrt repository updated"}}'
-          echo "已触发构建工作流"
+            -d '{
+              "event_type": "openwrt-updated",
+              "client_payload": {
+                "reason": "OpenWrt repository updated",
+                "last_sha": "${{ steps.check.outputs.last_sha }}",
+                "latest_sha": "${{ steps.check.outputs.latest_sha }}",
+                "commits_count": "${{ steps.update-details.outputs.commits_count }}"
+              }
+            }'
+          echo "✅ 已触发构建工作流"
+          echo "   更新详情："
+          echo "   - 新提交数量: ${{ steps.update-details.outputs.commits_count }}"
+          echo "   - SHA 范围: ${{ steps.check.outputs.last_sha }}...${{ steps.check.outputs.latest_sha }}"
