@@ -10,11 +10,21 @@ jobs:
   check-updates:
     runs-on: ubuntu-22.04
     name: 检查 OpenWrt 官方仓库更新
+    permissions:
+      contents: write
+      actions: write
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 检查 API 限制状态
+        run: |
+          echo "检查 GitHub API 限制状态..."
+          TOKEN="${{ secrets.PERSONAL_TOKEN || secrets.GITHUB_TOKEN }}"
+          curl -s -H "Authorization: token $TOKEN" \
+            "https://api.github.com/rate_limit" | jq '.rate'
 
       - name: 检查 OpenWrt 仓库最新提交
         id: check
@@ -23,10 +33,27 @@ jobs:
           
           # 获取 OpenWrt 官方仓库的最新 commit SHA
           echo "正在获取 OpenWrt 官方仓库最新提交..."
-          LATEST_SHA=$(curl -s -f "https://api.github.com/repos/openwrt/openwrt/commits/master" | jq -r '.sha')
+          
+          # 使用 GitHub Token 进行认证以避免 API 限制
+          # 优先使用 PERSONAL_TOKEN，如果没有则使用 GITHUB_TOKEN
+          TOKEN="${{ secrets.PERSONAL_TOKEN || secrets.GITHUB_TOKEN }}"
+          RESPONSE=$(curl -s -f \
+            -H "Authorization: token $TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/openwrt/openwrt/commits/master")
+          
+          if [ $? -ne 0 ]; then
+            echo "❌ API 请求失败，可能是网络问题或 API 限制"
+            echo "尝试无认证方式作为备选..."
+            RESPONSE=$(curl -s "https://api.github.com/repos/openwrt/openwrt/commits/master")
+          fi
+          
+          LATEST_SHA=$(echo "$RESPONSE" | jq -r '.sha // empty')
           
           if [ -z "$LATEST_SHA" ] || [ "$LATEST_SHA" = "null" ]; then
             echo "❌ 无法获取 OpenWrt 最新提交 SHA"
+            echo "API 响应内容："
+            echo "$RESPONSE" | head -20
             exit 1
           fi
           
@@ -85,7 +112,12 @@ jobs:
           LATEST_SHA="${{ steps.check.outputs.latest_sha }}"
           
           # 获取两个 SHA 之间的提交数量
-          COMMITS_COUNT=$(curl -s "https://api.github.com/repos/openwrt/openwrt/compare/${LAST_SHA}...${LATEST_SHA}" | jq '.total_commits // 0')
+          echo "正在获取提交数量..."
+          TOKEN="${{ secrets.PERSONAL_TOKEN || secrets.GITHUB_TOKEN }}"
+          COMMITS_COUNT=$(curl -s \
+            -H "Authorization: token $TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/openwrt/openwrt/compare/${LAST_SHA}...${LATEST_SHA}" | jq '.total_commits // 0')
           
           echo "commits_count=$COMMITS_COUNT" >> $GITHUB_OUTPUT
           echo "在两次检查之间有 $COMMITS_COUNT 个新提交"
@@ -93,9 +125,10 @@ jobs:
       - name: 触发构建工作流
         if: steps.check.outputs.has_updates == 'true'
         run: |
+          TOKEN="${{ secrets.PERSONAL_TOKEN || secrets.GITHUB_TOKEN }}"
           curl -X POST \
             -H "Accept: application/vnd.github.v3+json" \
-            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Authorization: token $TOKEN" \
             -H "Content-Type: application/json" \
             "https://api.github.com/repos/${{ github.repository }}/dispatches" \
             -d '{
