@@ -19,6 +19,33 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: 获取远程 SHA 记录
+        id: get-remote-sha
+        run: |
+          echo "尝试从远程仓库获取上次记录的 SHA..."
+          
+          # 尝试从远程仓库获取 last-openwrt-sha 文件内容
+          TOKEN="${{ secrets.PERSONAL_TOKEN || secrets.GITHUB_TOKEN }}"
+          REMOTE_SHA_RESPONSE=$(curl -s \
+            -H "Authorization: token $TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/${{ github.repository }}/contents/.github/last-openwrt-sha")
+          
+          if echo "$REMOTE_SHA_RESPONSE" | jq -e '.content' > /dev/null 2>&1; then
+            # 文件存在，解码内容
+            REMOTE_SHA=$(echo "$REMOTE_SHA_RESPONSE" | jq -r '.content' | base64 -d | tr -d '\n')
+            echo "从远程仓库获取到上次 SHA: $REMOTE_SHA"
+            echo "remote_sha=$REMOTE_SHA" >> $GITHUB_OUTPUT
+            echo "has_remote_file=true" >> $GITHUB_OUTPUT
+            
+            # 创建本地文件用于后续处理
+            mkdir -p .github
+            echo "$REMOTE_SHA" > .github/last-openwrt-sha
+          else
+            echo "远程仓库中没有找到 SHA 记录文件"
+            echo "has_remote_file=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: 检查 API 限制状态
         run: |
           echo "检查 GitHub API 限制状态..."
@@ -61,10 +88,8 @@ jobs:
           echo "latest_sha=$LATEST_SHA" >> $GITHUB_OUTPUT
           
           # 检查是否存在上次记录的 SHA
-          LAST_SHA_FILE=".github/last-openwrt-sha"
-          
-          if [ -f "$LAST_SHA_FILE" ]; then
-            LAST_SHA=$(cat "$LAST_SHA_FILE")
+          if [ "${{ steps.get-remote-sha.outputs.has_remote_file }}" = "true" ]; then
+            LAST_SHA="${{ steps.get-remote-sha.outputs.remote_sha }}"
             echo "上次记录的 SHA: $LAST_SHA"
             echo "last_sha=$LAST_SHA" >> $GITHUB_OUTPUT
             
@@ -82,26 +107,64 @@ jobs:
             echo "has_updates=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: 更新记录的 SHA
+      - name: 更新 SHA 记录到远程仓库
         if: always()
         run: |
-          mkdir -p .github
-          echo "${{ steps.check.outputs.latest_sha }}" > .github/last-openwrt-sha
-          echo "已更新记录的 SHA 到: ${{ steps.check.outputs.latest_sha }}"
-
-      - name: 提交 SHA 记录更新
-        if: always()
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
+          echo "更新 SHA 记录到远程仓库..."
           
-          if [ -n "$(git status --porcelain)" ]; then
-            git add .github/last-openwrt-sha
-            git commit -m "chore: 更新 OpenWrt 最新提交 SHA 到 ${{ steps.check.outputs.latest_sha }}"
-            git push
-            echo "已提交 SHA 记录更新"
+          TOKEN="${{ secrets.PERSONAL_TOKEN || secrets.GITHUB_TOKEN }}"
+          LATEST_SHA="${{ steps.check.outputs.latest_sha }}"
+          
+          # 创建或更新远程文件
+          FILE_CONTENT=$(echo -n "$LATEST_SHA" | base64 -w 0)
+          
+          # 构建 API 请求数据
+          if [ "${{ steps.get-remote-sha.outputs.has_remote_file }}" = "true" ]; then
+            # 文件存在，需要获取当前的 sha 进行更新
+            CURRENT_FILE_SHA=$(curl -s \
+              -H "Authorization: token $TOKEN" \
+              -H "Accept: application/vnd.github.v3+json" \
+              "https://api.github.com/repos/${{ github.repository }}/contents/.github/last-openwrt-sha" | jq -r '.sha')
+            
+            API_DATA=$(jq -n \
+              --arg content "$FILE_CONTENT" \
+              --arg message "chore: 更新 OpenWrt 最新提交 SHA 到 $LATEST_SHA" \
+              --arg sha "$CURRENT_FILE_SHA" \
+              '{
+                message: $message,
+                content: $content,
+                sha: $sha
+              }')
           else
-            echo "SHA 记录无变化，跳过提交"
+            # 文件不存在，创建新文件
+            API_DATA=$(jq -n \
+              --arg content "$FILE_CONTENT" \
+              --arg message "chore: 初始化 OpenWrt SHA 记录文件" \
+              '{
+                message: $message,
+                content: $content
+              }')
+          fi
+          
+          # 发送 API 请求
+          RESPONSE=$(curl -s -w "%{http_code}" \
+            -X PUT \
+            -H "Authorization: token $TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            -H "Content-Type: application/json" \
+            "https://api.github.com/repos/${{ github.repository }}/contents/.github/last-openwrt-sha" \
+            -d "$API_DATA")
+          
+          HTTP_CODE="${RESPONSE: -3}"
+          RESPONSE_BODY="${RESPONSE%???}"
+          
+          if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "201" ]; then
+            echo "✅ 成功更新远程 SHA 记录到: $LATEST_SHA"
+          else
+            echo "❌ 更新远程 SHA 记录失败"
+            echo "HTTP 状态码: $HTTP_CODE"
+            echo "响应内容: $RESPONSE_BODY"
+            exit 1
           fi
 
       - name: 获取更新详情
