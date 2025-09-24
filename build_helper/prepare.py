@@ -158,38 +158,38 @@ def prepare(configs: dict[str, dict[str, Any]]) -> None:
     openwrts = {name: OpenWrt(os.path.join(openwrt_paths, name), configs[name]["compile"]["openwrt_tag/branch"]) for name in cfg_names}
 
     # 下载AdGuardHome规则与配置
-    logger.info("下载AdGuardHome规则与配置...")
-    global_files_path = os.path.join(paths.workdir, "files")
-    shutil.copytree(os.path.join(paths.openwrt_k, "files"), global_files_path, symlinks=True)
-    adg_filters_path = os.path.join(global_files_path, "usr", "bin", "AdGuardHome", "data", "filters")
-    os.makedirs(adg_filters_path, exist_ok=True)
-    filters = {"1628750870.txt": "https://adguardteam.github.io/AdGuardSDNSFilter/Filters/filter.txt",
-               "1628750871.txt": "https://anti-ad.net/easylist.txt",
-               "1677875715.txt": "https://easylist-downloads.adblockplus.org/easylist.txt",
-               "1677875716.txt": "https://easylist-downloads.adblockplus.org/easylistchina.txt",
-               "1677875717.txt": "https://raw.githubusercontent.com/cjx82630/cjxlist/master/cjx-annoyance.txt",
-               "1677875718.txt": "https://raw.githubusercontent.com/zsakvo/AdGuard-Custom-Rule/master/rule/zhihu-strict.txt",
-               "1677875720.txt": "https://gist.githubusercontent.com/Ewpratten/a25ae63a7200c02c850fede2f32453cf/raw/b9318009399b99e822515d388b8458557d828c37/hosts-yt-ads",
-               "1677875724.txt": "https://raw.githubusercontent.com/banbendalao/ADgk/master/ADgk.txt",
-               "1677875725.txt": "https://www.i-dont-care-about-cookies.eu/abp/",
-               "1677875726.txt": "https://raw.githubusercontent.com/jdlingyu/ad-wars/master/hosts",
-               "1677875727.txt": "https://raw.githubusercontent.com/Goooler/1024_hosts/master/hosts",
-               "1677875728.txt": "https://winhelp2002.mvps.org/hosts.txt",
-               "1677875733.txt": "https://raw.githubusercontent.com/hl2guide/Filterlist-for-AdGuard/master/filter_whitelist.txt",
-               "1677875734.txt": "https://raw.githubusercontent.com/hg1978/AdGuard-Home-Whitelist/master/whitelist.txt",
-               "1677875735.txt": "https://raw.githubusercontent.com/mmotti/adguard-home-filters/master/whitelist.txt",
-               "1677875737.txt": "https://raw.githubusercontent.com/liwenjie119/adg-rules/master/white.txt",
-               "1677875739.txt": "https://raw.githubusercontent.com/JamesDamp/AdGuard-Home---Personal-Whitelist/master/AdGuardHome-Whitelist.txt",
-               #"1677875740.txt": "https://raw.githubusercontent.com/scarletbane/AdGuard-Home-Whitelist/main/whitelist.txt"
-    }
-    dl_tasks: list[DLTask] = []
-    for name, url in filters.items():
-        dl_tasks.append(dl2(url, os.path.join(adg_filters_path, name)))
+    # logger.info("下载AdGuardHome规则与配置...")
+    # global_files_path = os.path.join(paths.workdir, "files")
+    # shutil.copytree(os.path.join(paths.openwrt_k, "files"), global_files_path, symlinks=True)
+    # adg_filters_path = os.path.join(global_files_path, "usr", "bin", "AdGuardHome", "data", "filters")
+    # os.makedirs(adg_filters_path, exist_ok=True)
+    # filters = {"1628750870.txt": "https://adguardteam.github.io/AdGuardSDNSFilter/Filters/filter.txt",
+    #            "1628750871.txt": "https://anti-ad.net/easylist.txt",
+    #            "1677875715.txt": "https://easylist-downloads.adblockplus.org/easylist.txt",
+    #            "1677875716.txt": "https://easylist-downloads.adblockplus.org/easylistchina.txt",
+    #            "1677875717.txt": "https://raw.githubusercontent.com/cjx82630/cjxlist/master/cjx-annoyance.txt",
+    #            "1677875718.txt": "https://raw.githubusercontent.com/zsakvo/AdGuard-Custom-Rule/master/rule/zhihu-strict.txt",
+    #            "1677875720.txt": "https://gist.githubusercontent.com/Ewpratten/a25ae63a7200c02c850fede2f32453cf/raw/b9318009399b99e822515d388b8458557d828c37/hosts-yt-ads",
+    #            "1677875724.txt": "https://raw.githubusercontent.com/banbendalao/ADgk/master/ADgk.txt",
+    #            "1677875725.txt": "https://www.i-dont-care-about-cookies.eu/abp/",
+    #            "1677875726.txt": "https://raw.githubusercontent.com/jdlingyu/ad-wars/master/hosts",
+    #            "1677875727.txt": "https://raw.githubusercontent.com/Goooler/1024_hosts/master/hosts",
+    #            "1677875728.txt": "https://winhelp2002.mvps.org/hosts.txt",
+    #            "1677875733.txt": "https://raw.githubusercontent.com/hl2guide/Filterlist-for-AdGuard/master/filter_whitelist.txt",
+    #            "1677875734.txt": "https://raw.githubusercontent.com/hg1978/AdGuard-Home-Whitelist/master/whitelist.txt",
+    #            "1677875735.txt": "https://raw.githubusercontent.com/mmotti/adguard-home-filters/master/whitelist.txt",
+    #            "1677875737.txt": "https://raw.githubusercontent.com/liwenjie119/adg-rules/master/white.txt",
+    #            "1677875739.txt": "https://raw.githubusercontent.com/JamesDamp/AdGuard-Home---Personal-Whitelist/master/AdGuardHome-Whitelist.txt",
+    #            #"1677875740.txt": "https://raw.githubusercontent.com/scarletbane/AdGuard-Home-Whitelist/main/whitelist.txt"
+    # }
+    # dl_tasks: list[DLTask] = []
+    # for name, url in filters.items():
+    #     dl_tasks.append(dl2(url, os.path.join(adg_filters_path, name)))
 
-    dl_tasks.append(dl2("https://raw.githubusercontent.com/chenmozhijin/AdGuardHome-Rules/main/AdGuardHome-dnslist(by%20cmzj).yaml",
-                     os.path.join(global_files_path, "etc", "AdGuardHome-dnslist(by cmzj).yaml")))
+    # dl_tasks.append(dl2("https://raw.githubusercontent.com/chenmozhijin/AdGuardHome-Rules/main/AdGuardHome-dnslist(by%20cmzj).yaml",
+    #                  os.path.join(global_files_path, "etc", "AdGuardHome-dnslist(by cmzj).yaml")))
 
-    wait_dl_tasks(dl_tasks)
+    # wait_dl_tasks(dl_tasks)
 
     # 获取用户信息
     logger.info("编译者：%s", compiler)
@@ -344,63 +344,61 @@ def prepare_cfg(config: dict[str, Any],
 
     tmpdir = paths.get_tmpdir()
     dl_tasks: list[DLTask] = []
-    if adg_arch and openwrt.get_package_config("luci-app-adguardhome") == "y":
-        logger.info("%s下载架构为%s的AdGuardHome核心", cfg_name, adg_arch)
-        releases = get_gh_repo_last_releases("AdguardTeam/AdGuardHome")
-        if releases:
-            for asset in releases["assets"]:
-                if asset["name"] == f"AdGuardHome_linux_{adg_arch}.tar.gz":
-                    dl_tasks.append(dl2(asset["browser_download_url"], os.path.join(tmpdir.name, "AdGuardHome.tar.gz")))
-                    break
-            else:
-                logger.error("未找到可用的AdGuardHome二进制文件")
+    # if adg_arch and openwrt.get_package_config("luci-app-adguardhome") == "y":
+    #     logger.info("%s下载架构为%s的AdGuardHome核心", cfg_name, adg_arch)
+    #     releases = get_gh_repo_last_releases("AdguardTeam/AdGuardHome")
+    #     if releases:
+    #         for asset in releases["assets"]:
+    #             if asset["name"] == f"AdGuardHome_linux_{adg_arch}.tar.gz":
+    #                 dl_tasks.append(dl2(asset["browser_download_url"], os.path.join(tmpdir.name, "AdGuardHome.tar.gz")))
+    #                 break
+    #         else:
+    #             logger.error("未找到可用的AdGuardHome二进制文件")
 
     if clash_arch and openwrt.get_package_config("luci-app-openclash") == "y":
         logger.info("%s下载架构为%s的OpenClash核心", cfg_name, clash_arch)
-        dl_tasks.append(dl2(f"https://raw.githubusercontent.com/vernesong/OpenClash/refs/heads/core/dev/meta/clash-{clash_arch}.tar.gz",
-                                os.path.join(tmpdir.name, "clash_meta.tar.gz")))
-        #dl_tasks.append(dl2(f"https://raw.githubusercontent.com/vernesong/OpenClash/refs/heads/core/dev/smart/clash-{clash_arch}.tar.gz",
-        #                        os.path.join(tmpdir.name, "clash.smart.tar.gz")))
+        # dl_tasks.append(dl2(f"https://raw.githubusercontent.com/vernesong/OpenClash/refs/heads/core/dev/meta/clash-{clash_arch}.tar.gz",
+        #                         os.path.join(tmpdir.name, "clash_meta.tar.gz")))
+        dl_tasks.append(dl2(f"https://raw.githubusercontent.com/vernesong/OpenClash/refs/heads/core/dev/smart/clash-{clash_arch}.tar.gz",
+                               os.path.join(tmpdir.name, "clash.smart.tar.gz")))
 
     wait_dl_tasks(dl_tasks)
     # 解压
-    if os.path.isfile(os.path.join(tmpdir.name, "AdGuardHome.tar.gz")):
-        with tarfile.open(os.path.join(tmpdir.name, "AdGuardHome.tar.gz"), "r:gz") as tar:
-            if file := tar.extractfile("./AdGuardHome/AdGuardHome"):
-                with open(os.path.join(files_path, "usr", "bin", "AdGuardHome", "AdGuardHome"), "wb") as f:
-                    f.write(file.read())
-                os.chmod(os.path.join(files_path, "usr", "bin", "AdGuardHome", "AdGuardHome"), 0o755)  # noqa: S103
+    # if os.path.isfile(os.path.join(tmpdir.name, "AdGuardHome.tar.gz")):
+    #     with tarfile.open(os.path.join(tmpdir.name, "AdGuardHome.tar.gz"), "r:gz") as tar:
+    #         if file := tar.extractfile("./AdGuardHome/AdGuardHome"):
+    #             with open(os.path.join(files_path, "usr", "bin", "AdGuardHome", "AdGuardHome"), "wb") as f:
+    #                 f.write(file.read())
+    #             os.chmod(os.path.join(files_path, "usr", "bin", "AdGuardHome", "AdGuardHome"), 0o755)  # noqa: S103
 
     clash_core_path = os.path.join(files_path, "etc", "openclash", "core")
     if not os.path.isdir(clash_core_path):
         os.makedirs(clash_core_path)
 
-    if os.path.isfile(os.path.join(tmpdir.name, "clash_meta.tar.gz")):
-        with tarfile.open(os.path.join(tmpdir.name, "clash_meta.tar.gz"), "r:gz") as tar:
-            if file := tar.extractfile("clash"):
-                with open(os.path.join(clash_core_path, "clash_meta"), "wb") as f:
-                    f.write(file.read())
-                os.chmod(os.path.join(clash_core_path, "clash_meta"), 0o755)  # noqa: S103
+    # if os.path.isfile(os.path.join(tmpdir.name, "clash_meta.tar.gz")):
+    #     with tarfile.open(os.path.join(tmpdir.name, "clash_meta.tar.gz"), "r:gz") as tar:
+    #         if file := tar.extractfile("clash"):
+    #             with open(os.path.join(clash_core_path, "clash_meta"), "wb") as f:
+    #                 f.write(file.read())
+    #             os.chmod(os.path.join(clash_core_path, "clash_meta"), 0o755)  # noqa: S103
 
-    #if os.path.isfile(os.path.join(tmpdir.name, "clash.smart.tar.gz")):
-    #    with tarfile.open(os.path.join(tmpdir.name, "clash.smart.tar.gz"), "r:gz") as tar:
-    #        if file := tar.extractfile("clash"):
-    #            with open(os.path.join(clash_core_path, "clash"), "wb") as f:
-    #                f.write(file.read())
-    #            os.chmod(os.path.join(clash_core_path, "clash"), 0o755)  # noqa: S103
+    if os.path.isfile(os.path.join(tmpdir.name, "clash.smart.tar.gz")):
+       with tarfile.open(os.path.join(tmpdir.name, "clash.smart.tar.gz"), "r:gz") as tar:
+           if file := tar.extractfile("clash"):
+               with open(os.path.join(clash_core_path, "clash"), "wb") as f:
+                   f.write(file.read())
+               os.chmod(os.path.join(clash_core_path, "clash"), 0o755)  # noqa: S103
 
     tmpdir.cleanup()
 
     # 获取bt_trackers
-    bt_tracker = request_get("https://github.com/XIU2/TrackersListCollection/raw/master/all_aria2.txt")
+    # bt_tracker = request_get("https://github.com/XIU2/TrackersListCollection/raw/master/all_aria2.txt")
     # 替换信息
     with open(os.path.join(files_path, "etc", "uci-defaults", "zzz-chenmozhijin"), encoding="utf-8") as f:
         content = f.read()
     with open(os.path.join(files_path, "etc", "uci-defaults", "zzz-chenmozhijin"), "w", encoding="utf-8") as f:
         for line in content.splitlines():
-            if line.startswith("  uci set aria2.main.bt_tracker="):
-                f.write(f"  uci set aria2.main.bt_tracker='{bt_tracker}'\n")
-            elif line.startswith("uci set network.lan.ipaddr="):
+            if line.startswith("uci set network.lan.ipaddr="):
                 f.write(f"uci set network.lan.ipaddr='{config["openwrtext"]["ipaddr"]}'\n")
             elif "Compiled by 沉默の金" in line:
                 f.write(line.replace("Compiled by 沉默の金", f"Compiled by {compiler}") + "\n")
